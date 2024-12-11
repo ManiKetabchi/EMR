@@ -12,4 +12,14 @@ router.get('/patients', async (req, res) => {
     }
 });
 
+router.get('/doctors', async (req, res) => {
+    try {
+        const db = await connectDB();
+        const result = await db.collection('doctors').aggregate([]).toArray();
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ message: "Error getting doctors", error });
+    }
+});
+
 module.exports = router;
