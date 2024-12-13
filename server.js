@@ -1,13 +1,16 @@
-const express = require('express');
+import express from 'express';
+import aggregationRoutes from './routes/aggregation.js';
+
 const app = express();
-const port = process.env.port || 3000;
+const port = process.env.PORT || 3000; 
 
-const aggregationRoutes = require('./routes/aggregation');
-
+//Middleware
 app.use(express.json());
 
+//Routes 
 app.use('/api/aggregation', aggregationRoutes);
 
+//Start server
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
-});
+}); 
