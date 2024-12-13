@@ -61,5 +61,30 @@ router.put('/appointments/:id', async (req, res) => {
     }
 });
 
+router.get('/doctors/appointments-count', async (req, res) => {
+  try {
+    const appointmentsCollection = db.collection('Appointments');
+
+    // MongoDB aggregation pipeline
+    const aggregationPipeline = [
+      {
+        $group: {
+          _id: '$doctor_id', // Group by doctor ID
+          totalAppointments: { $count: {} }, // Count appointments per doctor
+        },
+      },
+      {
+        $sort: { totalAppointments: -1 }, // Optional: Sort by appointment count (descending)
+      },
+    ];
+
+    const results = await appointmentsCollection.aggregate(aggregationPipeline).toArray();
+    res.json(results);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error retrieving appointment counts');
+  }
+});
+
 
 module.exports = router;
