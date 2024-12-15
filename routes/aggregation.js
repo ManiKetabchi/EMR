@@ -61,6 +61,35 @@ router.put('/appointments/:id', async (req, res) => {
     }
 });
 
+router.get('/patients/aggregated-diagnosis', async (req, res) => {
+    try {
+        const db = await connectDB();
+        const result = await db.collection ('Patients').aggregate([
+            {
+              $unwind: {
+                path: "$medical_history",
+              },
+            },
+            {
+              $group: {
+                _id: "$medical_history",
+                numPatients: {
+                  $sum: 1,
+                }
+              }
+            },
+            {
+              $sort: {
+                numPatients: -1
+              }
+            }
+          ]).toArray();
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ message: "Error finding most common diagnosis", error });
+    }
+});
+
 router.get('/doctors/appointments-count', async (req, res) => {
   try {
     const appointmentsCollection = db.collection('Appointments');
