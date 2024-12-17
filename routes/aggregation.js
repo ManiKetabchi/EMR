@@ -109,6 +109,8 @@ router.get('/patients/aggregated-diagnosis', async (req, res) => {
 
 router.get('/doctors/appointments-count', async (req, res) => {
   try {
+
+    const db = await connectDB();
     const appointmentsCollection = db.collection('Appointments');
 
     
@@ -116,16 +118,42 @@ router.get('/doctors/appointments-count', async (req, res) => {
       {
         $group: {
           _id: '$doctor_id', 
-          totalAppointments: { $count: {} }, 
+          totalAppointments: { $sum: 1 }, 
+        },
+      }, {
+        $addFields: {
+          doctor_id: { $toObjectId: '$_id' }, 
         },
       },
       {
-        $sort: { totalAppointments: -1 }, 
+        $lookup: {
+          from: 'Doctors', 
+          localField: 'doctor_id', 
+          foreignField: '_id', 
+          as: 'doctorDetails', 
+        },
+      },
+      {
+        $unwind: '$doctorDetails', 
+      },
+      {
+        $project: {
+          _id: 0, 
+          doctor_id: '$_id',
+          doctorName: {
+            $concat: ['$doctorDetails.first_name', ' ', '$doctorDetails.last_name'], 
+          },
+          specialization: '$doctorDetails.specialization', 
+          totalAppointments: 1, 
+        },
+      },
+      {
+        $sort: { totalAppointments: -1 },
       },
     ];
 
     const results = await appointmentsCollection.aggregate(aggregationPipeline).toArray();
-    res.json(results);
+    res.status(200).json(results);
   } catch (error) {
     console.error(error);
     res.status(500).send('Error retrieving appointment counts');
