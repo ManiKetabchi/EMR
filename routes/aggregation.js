@@ -61,6 +61,23 @@ router.put('/appointments/:id', async (req, res) => {
     }
 });
 
+router.delete('/appointments/:id', async (req, res) => {
+  try {
+      const db = await connectDB();
+      const appointmentId = req.params.id; 
+      const appointment = await db.collection('appointments').findByIdAndDelete(appointmentId);
+
+      if (!appointment) {
+          return res.status(404).json({ message: "Appointment not found" });
+      }
+
+      res.status(200).json({message:"Appointment deleted"})
+
+  } catch (error) {
+      res.status(500).json({message: "Error canceling appointment ", error})
+  }
+});
+
 router.get('/patients/aggregated-diagnosis', async (req, res) => {
     try {
         const db = await connectDB();
