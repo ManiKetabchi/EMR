@@ -1,4 +1,5 @@
 import express from 'express';
+import { ObjectId } from 'mongodb';
 import {connectDB} from '../config/db.js';
 const router = express.Router();
 
@@ -65,16 +66,22 @@ router.delete('/appointments/:id', async (req, res) => {
   try {
       const db = await connectDB();
       const appointmentId = req.params.id; 
-      const appointment = await db.collection('appointments').findByIdAndDelete(appointmentId);
-
-      if (!appointment) {
-          return res.status(404).json({ message: "Appointment not found" });
+      if (!ObjectId.isValid(appointmentId)) {
+        return res.status(400).json({ message: "Invalid appointment ID format" });
       }
 
-      res.status(200).json({message:"Appointment deleted"})
+      const result = await db.collection('appointments').deleteOne({ _id: new ObjectId(appointmentId) });
 
-  } catch (error) {
-      res.status(500).json({message: "Error canceling appointment ", error})
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+
+    res.status(200).json({ message: "Appointment deleted successfully" });
+  } 
+  
+   catch (error) {
+    console.error("Error deleting appointment:", error.message);
+    res.status(500).json({ message: "Error deleting appointment", error: error.message });
   }
 });
 
