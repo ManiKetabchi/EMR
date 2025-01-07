@@ -38,13 +38,11 @@ router.put('/appointments/:id', async (req, res) => {
         const db = await connectDB(); 
         const appointmentId = req.params.id; 
         const { status } = req.body; 
-
         
         if (!status) {
-            return res.status(400).json({ message: "Status is required" });
+          return res.status(400).json({ message: "Status is required" });
         }
 
-        
         const result = await db.collection('appointments').updateOne(
             { _id: new require('mongodb').ObjectId(appointmentId) }, 
             { $set: { status: status, updated_at: new Date() } } 
