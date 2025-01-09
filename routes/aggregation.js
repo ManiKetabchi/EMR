@@ -23,6 +23,16 @@ router.get('/doctors', async (req, res) => {
     }
 });
 
+router.get('/appointments', async (req, res) => {
+  try {
+      const db = await connectDB();
+      const result = await db.collection('Appointments').aggregate([]).toArray();
+      res.json(result);
+  } catch (error) {
+      res.status(500).json({ message: "Error getting appointments", error });
+  }
+});
+
 router.post('/appointments', async (req, res) => {
     try {
         const db = await connectDB();
@@ -39,14 +49,14 @@ router.put('/appointments/:id', async (req, res) => {
         const appointmentId = req.params.id; 
         const { status } = req.body; 
 
-        
+    
         if (!status) {
             return res.status(400).json({ message: "Status is required" });
         }
 
         
         const result = await db.collection('appointments').updateOne(
-            { _id: new require('mongodb').ObjectId(appointmentId) }, 
+          { _id: new ObjectId(appointmentId) },
             { $set: { status: status, updated_at: new Date() } } 
         );
 
