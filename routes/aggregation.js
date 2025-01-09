@@ -165,5 +165,42 @@ router.get('/doctors/appointments-count', async (req, res) => {
   }
 });
 
+router.get('/patients/prescribed-meds',async(req,res)=>{
+  try {
+    const patientId=req.query.patientId;
+    const aggregationPipeline=[
+      {
+        $match:{patient_id: patientId},
+      },
+      {
+        $lookup:{
+          from:'prescriptions',
+          localField:'_id',
+          foreignField:'patient_id',
+          as:'prescriptionsDetails',
+        },
+      },
+      {
+        $unwind:'$prescriptionsDetails',
+      },
+      {
+        $project:{
+          _id:0,
+          patient_id:'$_id',
+          medication:'$prescriptionsDetails.medication',
+          dosage:'$prescriptionsDetails.dosage',
+          prescribedDate:'$prescriptionsDetails.prescribedDate',
+        },
+      },
+    ];
+
+    const results = await patientsCollection.aggregate(aggregationPipeline).toArray();
+    res.status(200).json(results);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error retrieving prescribed medications');
+  }
+});
+
 
 export default router; 
