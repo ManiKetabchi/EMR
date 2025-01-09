@@ -187,9 +187,10 @@ router.get('/patients/prescribed-meds',async(req,res)=>{
         $project:{
           _id:0,
           patient_id:'$_id',
-          medication:'$prescriptionsDetails.medication',
+          medication:'$prescriptionsDetails.medication_name',
           dosage:'$prescriptionsDetails.dosage',
-          prescribedDate:'$prescriptionsDetails.prescribedDate',
+          duration:'$prescriptionsDetails.duration',
+          prescribedDate:'$prescriptionsDetails.date_perscribed',
         },
       },
     ];
