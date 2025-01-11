@@ -1,4 +1,5 @@
 import express from 'express';
+import { ObjectId } from 'mongodb';
 import {connectDB} from '../config/db.js';
 const router = express.Router();
 
@@ -47,10 +48,9 @@ router.put('/appointments/:id', async (req, res) => {
         const db = await connectDB(); 
         const appointmentId = req.params.id; 
         const { status } = req.body; 
-
         
         if (!status) {
-            return res.status(400).json({ message: "Status is required" });
+          return res.status(400).json({ message: "Status is required" });
         }
 
         const result = await db.collection('Appointments').updateOne(
@@ -74,16 +74,22 @@ router.delete('/appointments/:id', async (req, res) => {
   try {
       const db = await connectDB();
       const appointmentId = req.params.id; 
-      const appointment = await db.collection('Appointments').findByIdAndDelete(appointmentId);
-
-      if (!appointment) {
-          return res.status(404).json({ message: "Appointment not found" });
+      if (!ObjectId.isValid(appointmentId)) {
+        return res.status(400).json({ message: "Invalid appointment ID format" });
       }
 
-      res.status(200).json({message:"Appointment deleted"})
+      const result = await db.collection('Appointments').deleteOne({ _id: new ObjectId(appointmentId) });
 
-  } catch (error) {
-      res.status(500).json({message: "Error canceling appointment ", error})
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+
+    res.status(200).json({ message: "Appointment deleted successfully" });
+  } 
+  
+   catch (error) {
+    console.error("Error deleting appointment:", error.message);
+    res.status(500).json({ message: "Error deleting appointment", error: error.message });
   }
 });
 
@@ -118,6 +124,8 @@ router.get('/patients/aggregated-diagnosis', async (req, res) => {
 
 router.get('/doctors/appointments-count', async (req, res) => {
   try {
+
+    const db = await connectDB();
     const appointmentsCollection = db.collection('Appointments');
 
     
@@ -125,19 +133,83 @@ router.get('/doctors/appointments-count', async (req, res) => {
       {
         $group: {
           _id: '$doctor_id', 
-          totalAppointments: { $count: {} }, 
+          totalAppointments: { $sum: 1 }, 
+        },
+      }, {
+        $addFields: {
+          doctor_id: { $toObjectId: '$_id' }, 
         },
       },
       {
-        $sort: { totalAppointments: -1 }, 
+        $lookup: {
+          from: 'Doctors', 
+          localField: 'doctor_id', 
+          foreignField: '_id', 
+          as: 'doctorDetails', 
+        },
+      },
+      {
+        $unwind: '$doctorDetails', 
+      },
+      {
+        $project: {
+          _id: 0, 
+          doctor_id: '$_id',
+          doctorName: {
+            $concat: ['$doctorDetails.first_name', ' ', '$doctorDetails.last_name'], 
+          },
+          specialization: '$doctorDetails.specialization', 
+          totalAppointments: 1, 
+        },
+      },
+      {
+        $sort: { totalAppointments: -1 },
       },
     ];
 
     const results = await appointmentsCollection.aggregate(aggregationPipeline).toArray();
-    res.json(results);
+    res.status(200).json(results);
   } catch (error) {
     console.error(error);
     res.status(500).send('Error retrieving appointment counts');
+  }
+});
+
+router.get('/patients/prescribed-meds',async(req,res)=>{
+  try {
+    const patientId=req.query.patientId;
+    const aggregationPipeline=[
+      {
+        $match:{patient_id: patientId},
+      },
+      {
+        $lookup:{
+          from:'prescriptions',
+          localField:'_id',
+          foreignField:'patient_id',
+          as:'prescriptionsDetails',
+        },
+      },
+      {
+        $unwind:'$prescriptionsDetails',
+      },
+      {
+        $project:{
+          _id:0,
+          patient_id:'$_id',
+          medication:'$prescriptionsDetails.medication_name',
+          dosage:'$prescriptionsDetails.dosage',
+          duration:'$prescriptionsDetails.duration',
+          prescribedDate:'$prescriptionsDetails.date_perscribed',
+        },
+      },
+    ];
+
+    const results = await patientsCollection.aggregate(aggregationPipeline).toArray();
+    res.status(200).json(results);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error retrieving prescribed medications');
   }
 });
 
