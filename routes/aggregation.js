@@ -6,7 +6,7 @@ router.get('/patients', async (req, res) => {
     try {
         const db = await connectDB();
         const result = await db.collection('Patients').aggregate([]).toArray();
-        res.json(result);
+        res.send(result);
     } catch (error) {
         res.status(500).json({ message: "Error getting patients", error });
     }
@@ -25,10 +25,20 @@ router.get('/doctors', async (req, res) => {
 router.post('/appointments', async (req, res) => {
     try {
         const db = await connectDB();
-        const result = await db.collection('Appointments').aggregate([]).toArray();
-        res.json(result);
+        const patient = await db.collection('Patients').aggregate([]).toArray();
+        const doctor = await db.collection('Doctors').aggregate([]).toArray();
+        const appointment = {
+          patient_id: patient.find(x => x.first_name === req.body.patient_firstname)._id,
+          doctor_id: doctor.find(x => x.first_name === req.body.doctor_firstname)._id,
+          appointment_date: new Date(),
+          reason: req.body.reason,
+          status: "Scheduled",
+          notes: req.body.notes
+        };
+        const result = await db.collection('Appointments').insertOne(appointment);
+        res.status(201).json({ message: "Appointment created", _id: result.insertedId });
     } catch (error) {
-        res.status(500).json({ message: "Error getting appointments", error });
+        res.status(500).json({ message: "Error posting appointments", error });
     }
 });
 
@@ -43,8 +53,7 @@ router.put('/appointments/:id', async (req, res) => {
             return res.status(400).json({ message: "Status is required" });
         }
 
-        
-        const result = await db.collection('appointments').updateOne(
+        const result = await db.collection('Appointments').updateOne(
             { _id: new require('mongodb').ObjectId(appointmentId) }, 
             { $set: { status: status, updated_at: new Date() } } 
         );
@@ -65,7 +74,7 @@ router.delete('/appointments/:id', async (req, res) => {
   try {
       const db = await connectDB();
       const appointmentId = req.params.id; 
-      const appointment = await db.collection('appointments').findByIdAndDelete(appointmentId);
+      const appointment = await db.collection('Appointments').findByIdAndDelete(appointmentId);
 
       if (!appointment) {
           return res.status(404).json({ message: "Appointment not found" });
