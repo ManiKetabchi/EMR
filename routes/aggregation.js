@@ -44,31 +44,63 @@ router.post('/appointments', async (req, res) => {
 });
 
 router.put('/appointments/:id', async (req, res) => {
+  try {
+    const db = await connectDB(); // Connect db
+    const appointmentId = req.params.id; // Extract id ting
+    const { status } = req.body; // Extract status ting
+
+  
+    if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+    }
+
+    if (status !== "Completed" && status !== "Scheduled") {
+        return res.status(400).json({ message: "Invalid status. Allowed statuses are 'Scheduled' and 'Completed'." });
+    }
+
+    const result = await db.collection('Appointments').updateOne(
+        { _id: new ObjectId(appointmentId) },
+        {
+            $set: { status, updated_at: new Date() }
+        }
+    );
+
+    if (result.matchedCount === 0) {
+        return res.status(404).json({ message: "Appointment not found" });
+    }
+
+    res.json({ message: "Appointment status updated successfully" });
+} catch (error) {
+    console.error("Error updating appointment status:", error);
+    res.status(500).json({ message: "Error updating appointment", error });
+}
+});
+
+
+router.get('/appointments/:id', async (req, res) => {
     try {
-        const db = await connectDB(); 
-        const apptid = req.params.id; 
-        const { status } = req.body; 
-        
-        if (!status) {
-          return res.status(400).json({ message: "Status is required" });
+        const db = await connectDB();
+        const appointmentId = req.params.id; 
+
+        if (!ObjectId.isValid(appointmentId)) {
+            return res.status(400).json({ message: "Invalid appointment ID format" });
         }
 
-        const result = await db.collection('Appointments').updateOne(
-            { _id: new require('mongodb').ObjectId(apptid) }, 
-            { $set: { status: status, updated_at: new Date() } } 
-        );
+        const appointment = await db.collection('Appointments').findOne({
+            _id: new ObjectId(appointmentId)
+        });
 
-       
-        if (result.matchedCount === 0) {
+        if (!appointment) {
             return res.status(404).json({ message: "Appointment not found" });
         }
 
-        res.json({ message: "Appointment status updated successfully" });
+        res.json(appointment);
     } catch (error) {
-        console.error("Error updating appointment status:", error);
-        res.status(500).json({ message: "Error updating appointment", error });
+        console.error("Error retrieving appointment:", error);
+        res.status(500).json({ message: "Error retrieving appointment", error });
     }
 });
+
 
 router.delete('/appointments/:id', async (req, res) => {
   try {
@@ -121,6 +153,8 @@ router.get('/patients/aggregated-diagnosis', async (req, res) => {
         res.status(500).json({ message: "Error finding most common diagnosis", error });
     }
 });
+
+
 
 router.get('/doctors/appointments-count', async (req, res) => {
   try {
