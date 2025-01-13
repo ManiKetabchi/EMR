@@ -46,7 +46,7 @@ router.post('/appointments', async (req, res) => {
 router.put('/appointments/:id', async (req, res) => {
     try {
         const db = await connectDB(); 
-        const appointmentId = req.params.id; 
+        const apptid = req.params.id; 
         const { status } = req.body; 
         
         if (!status) {
@@ -54,7 +54,7 @@ router.put('/appointments/:id', async (req, res) => {
         }
 
         const result = await db.collection('Appointments').updateOne(
-            { _id: new require('mongodb').ObjectId(appointmentId) }, 
+            { _id: new require('mongodb').ObjectId(apptid) }, 
             { $set: { status: status, updated_at: new Date() } } 
         );
 
@@ -73,12 +73,12 @@ router.put('/appointments/:id', async (req, res) => {
 router.delete('/appointments/:id', async (req, res) => {
   try {
       const db = await connectDB();
-      const appointmentId = req.params.id; 
-      if (!ObjectId.isValid(appointmentId)) {
+      const apptid = req.params.id; 
+      if (!ObjectId.isValid(apptid)) {
         return res.status(400).json({ message: "Invalid appointment ID format" });
       }
 
-      const result = await db.collection('Appointments').deleteOne({ _id: new ObjectId(appointmentId) });
+      const result = await db.collection('Appointments').deleteOne({ _id: new ObjectId(apptid) });
 
     if (result.deletedCount === 0) {
       return res.status(404).json({ message: "Appointment not found" });
@@ -212,6 +212,55 @@ router.get('/patients/prescribed-meds',async(req,res)=>{
     res.status(500).send('Error retrieving prescribed medications');
   }
 });
+//first join
+router.get('/appointments/:id/details', async (req, res) => { //let me know if yall need anything changed? i added basically everything it should fetch but lmk
+    try {
+        const db = await connectDB()
+        const apptid = req.params.id
+        if (!ObjectId.isValid(apptid)) {
+            return res.status(400).json({ message: "id format is wrong" })
+        }
+        const apptdetails = await db.collection('Appointments').aggregate([
+            {
+                $match: { _id: new ObjectId(apptid) }
+            },
+            {
+                $lookup: {
+                    from: 'Patients',
+                    localField: 'patient_id', 
+                    foreignField: '_id',
+                    as: 'patientDetails'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'Doctors',
+                    localField: 'doctor_id',
+                    foreignField: '_id', 
+                    as: 'doctorDetails'
+                }
+            },
+            {
+                $project: {
+                    _id: 1,
+                    appointment_date: 1,
+                    reason: 1,
+                    status: 1,
+                    notes: 1,
+                    patientDetails: { $arrayElemAt: ['$patientDetails', 0] },
+                    doctorDetails: { $arrayElemAt: ['$doctorDetails', 0] }
+                }
+            }
+        ]).toArray()
+        if (apptdetails.length === 0) {
+            return res.status(404).json({ message: "appt not found or doesnt exist" });
+        }
+        res.status(200).json(apptdetails[0])
+    } catch (error) {
+        console.error("error fetching appt details:", error);
+        res.status(500).json({ message: "error fetching appt details", error })
+    }
+})
 
 
 export default router; 
