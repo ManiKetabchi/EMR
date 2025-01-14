@@ -251,4 +251,54 @@ router.get('/patients/prescribed-meds',async(req,res)=>{
   }
 });
 
+//first join
+router.get('/appointments/:id/details', async (req, res) => { //let me know if yall need anything changed? i added basically everything it should fetch but lmk
+    try {
+        const db = await connectDB()
+        const apptid = req.params.id
+        if (!ObjectId.isValid(apptid)) {
+            return res.status(400).json({ message: "id format is wrong" })
+        }
+        const apptdetails = await db.collection('Appointments').aggregate([
+            {
+                $match: { _id: new ObjectId(apptid) }
+            },
+            {
+                $lookup: {
+                    from: 'Patients',
+                    localField: 'patient_id', 
+                    foreignField: '_id',
+                    as: 'patientDetails'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'Doctors',
+                    localField: 'doctor_id',
+                    foreignField: '_id', 
+                    as: 'doctorDetails'
+                }
+            },
+            {
+                $project: {
+                    _id: 1,
+                    appointment_date: 1,
+                    reason: 1,
+                    status: 1,
+                    notes: 1,
+                    patientDetails: { $arrayElemAt: ['$patientDetails', 0] },
+                    doctorDetails: { $arrayElemAt: ['$doctorDetails', 0] }
+                }
+            }
+        ]).toArray()
+        if (apptdetails.length === 0) {
+            return res.status(404).json({ message: "appt not found or doesnt exist" });
+        }
+        res.status(200).json(apptdetails[0])
+    } catch (error) {
+        console.error("error fetching appt details:", error);
+        res.status(500).json({ message: "error fetching appt details", error })
+    }
+})
+
 export default router; 
