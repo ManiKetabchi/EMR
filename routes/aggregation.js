@@ -129,7 +129,48 @@ router.get('/appointments/:id', async (req, res) => {
 });
 
 // Retrieve all patients treated by a specific doctor
-
+router.get('/doctors/:id/patients', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const doctorId = req.params.id;
+        if (!ObjectId.isValid(doctorId)) {
+            return res.status(400).json({ message: "invalid doctorId" })
+        }
+    const result = await db.collection('Appointments').aggregate([
+      {
+        $match: {
+          doctor_id: new ObjectId(doctorId)
+        }
+      },
+      {
+        $lookup: {
+          from: "Patients",
+          localField: "patient_id",
+          foreignField: "_id",
+          as: "patient_info"
+        }
+      },
+      {
+        $lookup: {
+          from: "Doctors",
+          localField: "doctor_id",
+          foreignField: "_id",
+          as: "doctor_info"
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          doctor: '$doctor_info.first_name',
+          patients: '$patient_info.first_name'
+        }
+      }
+    ]).toArray();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: "Error retrieving patients treated by specific doctor"})
+  }
+});
 
 // List of most common diagnoses across all patients
 router.get('/patients/aggregated-diagnosis', async (req, res) => {
@@ -251,7 +292,6 @@ router.get('/patients/prescribed-meds',async(req,res)=>{
     res.status(500).send('Error retrieving prescribed medications');
   }
 });
-
 //first join
 router.get('/appointments/:id/details', async (req, res) => { //let me know if yall need anything changed? i added basically everything it should fetch but lmk
     try {

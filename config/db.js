@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 dotenv.config(); 
 
-const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017'; 
+const uri = process.env.MONGODB_URI || 'mongodb+srv://Joline:Password1@cluster0.io63e.mongodb.net/';
 const dbName = 'healthcare';
 
 let db;

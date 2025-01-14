@@ -9,7 +9,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 //Routes 
-app.use('/api/aggregation', aggregationRoutes);
+app.use(aggregationRoutes);
 
 //Start server
 app.listen(port, () => {
