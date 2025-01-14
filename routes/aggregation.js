@@ -72,7 +72,7 @@ router.put('/appointments/:id', async (req, res) => {
         return res.status(404).json({ message: "Appointment not found" });
     }
 
-    res.json({ message: "Appointment status updated successfully" });
+    res.json({ message: `Appointment status updated to: ${status}` });
 } catch (error) {
     console.error("Error updating appointment status:", error);
     res.status(500).json({ message: "Error updating appointment", error });
@@ -215,7 +215,8 @@ router.get('/doctors/appointments-count', async (req, res) => {
 // Retrieve a list of all prescribed medications for a specific patient
 router.get('/patients/prescribed-meds',async(req,res)=>{
   try {
-    const patientId=req.query.patientId;
+    const db = await connectDB();
+    const patientId = req.query.patientId;
     const aggregationPipeline=[
       {
         $match:{patient_id: patientId},
@@ -243,7 +244,7 @@ router.get('/patients/prescribed-meds',async(req,res)=>{
       },
     ];
 
-    const results = await patientsCollection.aggregate(aggregationPipeline).toArray();
+    const results = await db.collection('Patients').aggregate(aggregationPipeline).toArray();
     res.status(200).json(results);
   } catch (error) {
     console.error(error);
