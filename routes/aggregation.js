@@ -165,43 +165,54 @@ router.get('/doctors/appointments-count', async (req, res) => {
   }
 });
 
-router.get('/patients/prescribed-meds',async(req,res)=>{
+router.get('/patients/prescribed-meds', async (req, res) => { 
   try {
-    const patientId=req.query.patientId;
-    const aggregationPipeline=[
+
+
+    const db = await connectDB();
+    const patientId = req.query.patientId;
+    const prescriptionsCollection = db.collection('Prescriptions');
+
+
+    if (!ObjectId.isValid(patientId)) {
+      return res.status(400).json({ message:'Invalid patient ID'});
+    }
+
+    const aggregationPipeline = [
       {
-        $match:{patient_id: patientId},
+        $match: { patient_id: new ObjectId(patientId) },
       },
       {
-        $lookup:{
-          from:'prescriptions',
-          localField:'_id',
-          foreignField:'patient_id',
-          as:'prescriptionsDetails',
+        $lookup: {
+          from: 'Prescriptions',
+          localField: 'patient_id',
+          foreignField: 'patient_id',
+          as: 'prescriptionDetails',
         },
       },
       {
-        $unwind:'$prescriptionsDetails',
+        $unwind: '$prescriptionDetails',
       },
       {
-        $project:{
-          _id:0,
-          patient_id:'$_id',
-          medication:'$prescriptionsDetails.medication_name',
-          dosage:'$prescriptionsDetails.dosage',
-          duration:'$prescriptionsDetails.duration',
-          prescribedDate:'$prescriptionsDetails.date_perscribed',
+        $project: {
+          _id: 0,
+          patient_id: '$_id',
+          medication: '$prescriptionDetails.medication_name',
+          dosage: '$prescriptionDetails.dosage',
+          duration: '$prescriptionDetails.duration',
+          prescribedDate: '$prescriptionDetails.date_prescribed',
         },
       },
     ];
 
-    const results = await patientsCollection.aggregate(aggregationPipeline).toArray();
-    res.status(200).json(results);
+    const result = await prescriptionsCollection.aggregate(aggregationPipeline).toArray();
+
+    res.status(200).json(result);
+
   } catch (error) {
-    console.error(error);
-    res.status(500).send('Error retrieving prescribed medications');
+    console.error("Error retrieving prescribed medications:", error);
+    res.status(500).json({ message: "Error retrieving prescribed medications", error });
   }
 });
-
 
 export default router; 
