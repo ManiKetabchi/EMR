@@ -247,7 +247,7 @@ router.get('/patients/prescribed-meds',async(req,res)=>{
   }
 });
 //first join
-router.get('/appointments/:id/details', async (req, res) => { //let me know if yall need anything changed? i added basically everything it should fetch but lmk
+router.get('/appointments/:id/details', async (req, res) => { 
     try {
         const db = await connectDB()
         const apptid = req.params.id
