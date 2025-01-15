@@ -244,7 +244,6 @@ router.get('/doctors/appointments-count', async (req, res) => {
         $sort: { totalAppointments: -1 },
       },
     ];
-
     const results = await appointmentsCollection.aggregate(aggregationPipeline).toArray();
     res.status(200).json(results);
   } catch (error) {
