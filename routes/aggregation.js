@@ -302,6 +302,7 @@ router.get('/patients/prescribed-meds', async (req, res) => {
     res.status(500).json({ message: "Error retrieving prescribed medications", error });
   }
 });
+
 //first join
 router.get('/appointments/:id/details', async (req, res) => { 
     try {
